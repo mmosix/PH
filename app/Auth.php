@@ -187,4 +187,12 @@ class Auth {
         session_destroy();
         setcookie(session_name(), '', time() - 3600, '/');
     }
+
+    public static function checkRole(array $roles) {
+        session_start();
+        if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], $roles)) {
+            header('Location: /login.php');
+            exit();
+        }
+    }
 }
