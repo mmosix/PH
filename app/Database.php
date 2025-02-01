@@ -5,12 +5,27 @@ namespace App;
 class Database {
     private static $instance = null;
     private $pdo;
+    private $host;
+    private $database;
+    private $username;
+    private $password;
 
     private function __construct() {
-        $host = $_ENV['DB_HOST'];
-        $db   = $_ENV['DB_DATABASE'];
-        $user = $_ENV['DB_USERNAME'];
-        $pass = $_ENV['DB_PASSWORD'];
+        // Load environment variables
+        if (file_exists(__DIR__ . '/../.env')) {
+            $env = parse_ini_file(__DIR__ . '/../.env');
+            $this->host = $env['DB_HOST'];
+            $this->database = $env['DB_DATABASE'];
+            $this->username = $env['DB_USERNAME'];
+            $this->password = $env['DB_PASSWORD'];
+        } else {
+            throw new \Exception('.env file not found');
+        }
+
+        $host = $this->host;
+        $db   = $this->database;
+        $user = $this->username;
+        $pass = $this->password;
         $charset = 'utf8mb4';
 
         $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
