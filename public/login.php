@@ -1,9 +1,18 @@
 <?php
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Debug autoloader
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Verify autoloader is working and class exists
+if (!class_exists('App\\Auth')) {
+    die('Autoloader is not working correctly. Class App\\Auth could not be found. Include path: ' . get_include_path());
 }
 
 // Start Auth system
