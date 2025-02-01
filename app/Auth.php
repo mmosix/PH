@@ -30,7 +30,12 @@ class Auth {
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
-            if (!$user || !password_verify($password, $user['password_hash'])) {
+            if (!$user) {
+                self::$logger->info('Failed login attempt', ['email' => $email]);
+                throw AuthException::userNotFound();
+            }
+
+            if (!password_verify($password, $user['password_hash'])) {
                 self::$logger->info('Failed login attempt', ['email' => $email]);
                 throw AuthException::invalidCredentials();
             }
