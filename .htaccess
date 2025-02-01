@@ -1,0 +1,22 @@
+Options -Indexes
+RewriteEngine On
+
+# Redirect to public/
+RewriteRule ^$ public/ [L]
+RewriteRule (.*) public/$1 [L]
+
+# Security Headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
+
+# Block sensitive files
+<FilesMatch "\.(env|gitignore|htaccess|sql|phar)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent PHP execution in uploads
+<DirectoryMatch "^/public/assets/uploads/.*">
+    php_flag engine off
+</DirectoryMatch>

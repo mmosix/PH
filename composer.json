@@ -1,0 +1,13 @@
+{
+    "name": "palava/ph",
+    "description": "PH",
+    "require": {
+        "vlucas/phpdotenv": "^5.3",
+        "web3p/web3.php": "^0.3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Palava\\Ph\\": "src/"
+        }
+    }
+}
