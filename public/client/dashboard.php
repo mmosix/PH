@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__.'/../../app/Auth.php';
-require_once __DIR__.'/../../app/Database.php';
+require_once __DIR__.'/../../vendor/autoload.php';
+// Database class will be autoloaded
 
 // Check if user is logged in and has client role
-Auth::checkRole(['client']);
+\App\Auth::checkRole(['client']);
 
 $userId = $_SESSION['user']['id'];
-$pdo = Database::connect();
+$pdo = \App\Database::connect();
 
 // Fetch client's projects
 $projects = $pdo->prepare("
