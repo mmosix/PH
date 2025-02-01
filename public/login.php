@@ -29,14 +29,14 @@ $registered = isset($_GET['registered']);
 // System already initialized above
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     
     if (!\App\Security::validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request';
     } else {
         try {
-            $user = \App\Auth::login($username, $password);
+            $user = \App\Auth::login($email, $password);
             if ($user && isset($user['id'])) {
                 header('Location: index.php');
                 exit;
@@ -77,8 +77,8 @@ $csrfToken = \App\Security::generateCSRFToken();
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
             
             <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
             </div>
 
             <div class="form-group">

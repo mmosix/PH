@@ -92,7 +92,7 @@ class DatabaseConnectionPool
 
         return new PDO(
             $dsn,
-            self::$config['username'],
+            self::$config['username'], // Database connection username - not related to user authentication
             self::$config['password'],
             $options
         );

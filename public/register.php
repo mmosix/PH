@@ -22,11 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             // Validate and sanitize input
-            $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
             $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
 
             $userData = [
-                'username' => $username,
                 'email' => $email,
                 'password' => $_POST['password'],
                 'confirm_password' => $_POST['confirm_password']
@@ -68,11 +66,6 @@ $csrfToken = \App\Security::generateCSRFToken();
             <form method="POST" action="">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                 
-                <div class="form-group">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-
                 <div class="form-group">
                     <label for="email">Email:</label>
                     <input type="email" id="email" name="email" required>

@@ -15,28 +15,28 @@ class Auth {
     }
 
     /**
-     * Authenticate a user with username and password
-     * @param string $username The username
+     * Authenticate a user with email and password
+     * @param string $email The user's email
      * @param string $password The password
      * @return array User data
      * @throws AuthException If credentials are invalid or email not verified
      */
-    public static function login(string $username, string $password): array
+    public static function login(string $email, string $password): array
     {
         $db = \App\Utils\DatabaseConnectionPool::getConnection();
         
         try {
-            $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
-            $stmt->execute([$username]);
+            $stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
             $user = $stmt->fetch();
 
             if (!$user || !password_verify($password, $user['password'])) {
-                self::$logger->info('Failed login attempt', ['username' => $username]);
+                self::$logger->info('Failed login attempt', ['email' => $email]);
                 throw AuthException::invalidCredentials();
             }
 
             if (!$user['email_verified']) {
-                self::$logger->info('Unverified email login attempt', ['username' => $username]);
+                self::$logger->info('Unverified email login attempt', ['email' => $email]);
                 throw AuthException::emailNotVerified();
             }
 
@@ -44,7 +44,7 @@ class Auth {
             $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
 
             $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
+            $_SESSION['email'] = $user['email'];
             $_SESSION['last_activity'] = time();
 
             self::$logger->info('Successful login', ['user_id' => $user['id']]);
@@ -67,7 +67,7 @@ class Auth {
         global $db;
         
         try {
-            $required = ['username', 'password', 'email', 'name'];
+            $required = ['email', 'password', 'name'];
             $missing = array_filter($required, fn($field) => empty($userData[$field]));
             
             if (!empty($missing)) {
@@ -87,12 +87,11 @@ class Auth {
                 throw new AuthException('Password must be at least 8 characters long');
             }
             
-            // Check if username or email exists
-            $stmt = $db->prepare("SELECT username, email FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$userData['username'], $userData['email']]);
+            // Check if email exists
+            $stmt = $db->prepare("SELECT email FROM users WHERE email = ?");
+            $stmt->execute([$userData['email']]);
             if ($existing = $stmt->fetch()) {
-                $field = $existing['username'] === $userData['username'] ? 'username' : 'email';
-                throw new AuthException("$field already exists");
+                throw new AuthException("Email already exists");
             }
             
             // Hash password with strong algorithm

@@ -33,7 +33,7 @@ php fix-autoload.php
 Ensure login.php uses fully qualified namespace:
 ```php
 \App\Auth::initialize();
-\App\Auth::login($username, $password);
+\App\Auth::login($email, $password);
 ```
 
 5. **Fix Permissions**

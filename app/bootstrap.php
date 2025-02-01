@@ -41,7 +41,7 @@ use App\Utils\DatabaseConnectionPool;
 $dbConfig = [
     'host' => $_ENV['DB_HOST'],
     'database' => $_ENV['DB_NAME'],
-    'username' => $_ENV['DB_USER'],
+    'username' => $_ENV['DB_USER'], // Database connection username - not related to user authentication
     'password' => $_ENV['DB_PASS']
 ];
 

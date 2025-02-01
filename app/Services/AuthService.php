@@ -51,26 +51,26 @@ class AuthService
     }
 
     /**
-     * Authenticate a user with username and password
-     * @param string $username The username
+     * Authenticate a user with email and password
+     * @param string $email The user's email
      * @param string $password The password
      * @return array User data
      * @throws AuthException If credentials are invalid or email not verified
      */
-    public function login(string $username, string $password): array
+    public function login(string $email, string $password): array
     {
         try {
-            $stmt = $this->db->prepare("SELECT * FROM users WHERE username = ?");
-            $stmt->execute([$username]);
+            $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
             $user = $stmt->fetch();
 
             if (!$user || !password_verify($password, $user['password'])) {
-                $this->logger->info('Failed login attempt', ['username' => $username]);
+                $this->logger->info('Failed login attempt', ['email' => $email]);
                 throw AuthException::invalidCredentials();
             }
 
             if (!$user['email_verified']) {
-                $this->logger->info('Unverified email login attempt', ['username' => $username]);
+                $this->logger->info('Unverified email login attempt', ['email' => $email]);
                 throw AuthException::emailNotVerified();
             }
 
@@ -79,7 +79,7 @@ class AuthService
 
             // Set session data
             $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
+            $_SESSION['email'] = $user['email'];
             $_SESSION['last_activity'] = time();
 
             $this->logger->info('Successful login', ['user_id' => $user['id']]);
@@ -101,7 +101,7 @@ class AuthService
     {
         try {
             // Validate required fields
-            $required = ['username', 'password', 'email', 'name'];
+            $required = ['email', 'password', 'name'];
             if ($missing = $this->validateRequired($userData, $required)) {
                 throw new AuthException(
                     'Missing required fields: ' . implode(', ', $missing),
@@ -119,12 +119,11 @@ class AuthService
                 throw new AuthException("Password must be between " . self::PASSWORD_MIN_LENGTH . " and 72 characters");
             }
 
-            // Check if username or email exists
-            $stmt = $this->db->prepare("SELECT username, email FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$userData['username'], $userData['email']]);
+            // Check if email exists
+            $stmt = $this->db->prepare("SELECT email FROM users WHERE email = ?");
+            $stmt->execute([$userData['email']]);
             if ($existing = $stmt->fetch()) {
-                $field = $existing['username'] === $userData['username'] ? 'username' : 'email';
-                throw new AuthException("$field already exists");
+                throw new AuthException("Email already exists");
             }
 
             // Hash password

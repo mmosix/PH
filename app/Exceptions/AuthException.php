@@ -6,7 +6,7 @@ class AuthException extends BaseException
 {
     public static function invalidCredentials(): self
     {
-        return new self('Invalid username or password');
+        return new self('Invalid email or password');
     }
 
     public static function emailNotVerified(): self
