@@ -23,7 +23,7 @@ class Auth {
      */
     public static function login(string $username, string $password): array
     {
-        global $db;
+        $db = \App\Utils\DatabaseConnectionPool::getConnection();
         
         try {
             $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
