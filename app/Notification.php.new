@@ -1,0 +1,103 @@
+<?php
+
+namespace App;
+
+use App\Exceptions\DatabaseException;
+use App\Utils\Logger;
+
+class Notification {
+    private static Logger $logger;
+
+    public static function initialize(): void
+    {
+        self::$logger = Logger::getInstance();
+    }
+
+    /**
+     * Create a new notification
+     * @param int $userId User ID to notify
+     * @param string $message Notification message
+     * @param string $type Notification type (info, warning, error)
+     * @return array Created notification data
+     * @throws DatabaseException If creation fails
+     */
+    public static function create(int $userId, string $message, string $type): array
+    {
+        global $db;
+        
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO notifications (user_id, message, type, created_at)
+                VALUES (?, ?, ?, NOW())
+            ");
+            
+            $stmt->execute([$userId, $message, $type]);
+            $id = $db->lastInsertId();
+            
+            self::$logger->info('Notification created', [
+                'user_id' => $userId,
+                'type' => $type,
+                'id' => $id
+            ]);
+            
+            return [
+                'id' => $id,
+                'user_id' => $userId,
+                'message' => $message,
+                'type' => $type,
+                'read' => false,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+        } catch (\PDOException $e) {
+            throw DatabaseException::queryFailed('notification creation', $e->getMessage());
+        }
+    }
+
+    /**
+     * Get unread notifications for a user
+     * @param int $userId User ID
+     * @return array List of unread notifications
+     * @throws DatabaseException If query fails
+     */
+    public static function getUnread(int $userId): array
+    {
+        global $db;
+        
+        try {
+            $stmt = $db->prepare("
+                SELECT * FROM notifications 
+                WHERE user_id = ? AND read = false
+                ORDER BY created_at DESC
+            ");
+            
+            $stmt->execute([$userId]);
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            throw DatabaseException::queryFailed('unread notifications fetch', $e->getMessage());
+        }
+    }
+
+    /**
+     * Mark a notification as read
+     * @param int $id Notification ID
+     * @return bool True if successful
+     * @throws DatabaseException If update fails
+     */
+    public static function markAsRead(int $id): bool
+    {
+        global $db;
+        
+        try {
+            $stmt = $db->prepare("UPDATE notifications SET read = true WHERE id = ?");
+            $result = $stmt->execute([$id]);
+            
+            if ($result && $stmt->rowCount() > 0) {
+                self::$logger->debug('Notification marked as read', ['id' => $id]);
+                return true;
+            }
+            return false;
+        } catch (\PDOException $e) {
+            throw DatabaseException::queryFailed('notification update', $e->getMessage());
+        }
+    }
+}
