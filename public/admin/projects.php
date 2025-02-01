@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../app/Project.php';
 use App\Project; // Add this line
 
 // Initialize database connection
-$db = \App\Database::getInstance();
+$db = \App\Database::getInstance()->getConnection();
 
 // Check if user is logged in and has admin role
 \App\Auth::checkRole(['admin']);
