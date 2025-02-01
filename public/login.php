@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $user = \App\Auth::login($email, $password);
             if ($user && isset($user['id'])) {
+                $_SESSION['role'] = $user['role'];
                 header('Location: index.php');
                 exit;
             }

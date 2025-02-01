@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userData = [
                 'email' => $email,
                 'password' => $_POST['password'],
-                'confirm_password' => $_POST['confirm_password']
+                'confirm_password' => $_POST['confirm_password'],
+                'role' => $_POST['role'] // Add role to user data
             ];
 
             // Register user
@@ -79,6 +80,14 @@ $csrfToken = \App\Security::generateCSRFToken();
                 <div class="form-group">
                     <label for="confirm_password">Confirm Password:</label>
                     <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role:</label>
+                    <select id="role" name="role" required>
+                        <option value="client">Client</option>
+                        <option value="contractor">Contractor</option>
+                    </select>
                 </div>
 
                 <button type="submit">Register</button>
