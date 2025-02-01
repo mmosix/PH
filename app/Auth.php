@@ -6,13 +6,6 @@ use App\Exceptions\AuthException;
 use App\Exceptions\DatabaseException;
 use App\Utils\Logger;
 
-// Configure secure session
-ini_set('session.cookie_httponly', $_ENV['SESSION_HTTPONLY'] ?? true);
-ini_set('session.cookie_secure', $_ENV['SESSION_SECURE'] ?? true);
-ini_set('session.cookie_samesite', $_ENV['SESSION_SAME_SITE'] ?? 'Lax');
-
-session_start();
-
 class Auth {
     private static Logger $logger;
     
