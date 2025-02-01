@@ -189,7 +189,9 @@ class Auth {
     }
 
     public static function checkRole(array $roles) {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         if (!isset($_SESSION['user']) || !isset($_SESSION['user']['role']) || !in_array($_SESSION['user']['role'], $roles)) {
             header('Location: /login.php');
             exit();
