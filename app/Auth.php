@@ -192,7 +192,7 @@ class Auth {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        if (!isset($_SESSION['user']) || !isset($_SESSION['user']['role']) || !in_array($_SESSION['user']['role'], $roles)) {
+        if (!isset($_SESSION['user']) || !isset($_SESSION['user']['type']) || !in_array($_SESSION['user']['type'], $roles)) {
             header('Location: /login.php');
             exit();
         }
