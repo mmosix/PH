@@ -42,6 +42,17 @@ class Database {
         }
     }
 
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    public function getConnection() {
+        return $this->pdo;
+    }
+
     public static function connect() {
         if (self::$instance === null) {
             self::$instance = new self();
