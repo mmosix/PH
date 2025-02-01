@@ -35,14 +35,6 @@ class Auth {
                 throw AuthException::invalidCredentials();
             }
 
-            if (!$user['email_verified']) {
-                self::$logger->info('Unverified email login attempt', ['email' => $email]);
-                throw AuthException::emailNotVerified();
-            }
-
-            // Update last login timestamp
-            $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
-
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['email'] = $user['email'];
             $_SESSION['last_activity'] = time();
@@ -67,7 +59,7 @@ class Auth {
         global $db;
         
         try {
-            $required = ['email', 'password', 'name'];
+            $required = ['email', 'password', 'name', 'role'];
             $missing = array_filter($required, fn($field) => empty($userData[$field]));
             
             if (!empty($missing)) {
@@ -101,10 +93,6 @@ class Auth {
                 ['cost' => 12]
             );
             
-            // Generate verification token
-            $userData['verification_token'] = bin2hex(random_bytes(32));
-            $userData['email_verified'] = false;
-            
             // Insert user
             $fields = implode(', ', array_keys($userData));
             $values = implode(', ', array_fill(0, count($userData), '?'));
@@ -113,6 +101,9 @@ class Auth {
             
             $userId = $db->lastInsertId();
             self::$logger->info('New user registered', ['user_id' => $userId]);
+            
+            // Generate verification token
+            self::generateVerificationToken($userId);
             
             // Return user data without password
             unset($userData['password']);
@@ -135,9 +126,10 @@ class Auth {
         
         try {
             $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 day'));
             
-            $stmt = $db->prepare("UPDATE users SET verification_token = ? WHERE id = ?");
-            if (!$stmt->execute([$token, $userId])) {
+            $stmt = $db->prepare("INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)");
+            if (!$stmt->execute([$userId, $token, $expiresAt])) {
                 throw AuthException::userNotFound();
             }
             
@@ -158,7 +150,12 @@ class Auth {
         global $db;
         
         try {
-            $stmt = $db->prepare("UPDATE users SET email_verified = true WHERE verification_token = ?");
+            $stmt = $db->prepare("
+                UPDATE users u
+                JOIN email_verification_tokens evt ON u.id = evt.user_id
+                SET u.email_verified = true, evt.token = NULL
+                WHERE evt.token = ? AND evt.expires_at > NOW()
+            ");
             if ($stmt->execute([$token]) && $stmt->rowCount() > 0) {
                 self::$logger->info('Email verified', ['token' => $token]);
                 return true;
