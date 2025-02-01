@@ -40,9 +40,12 @@ class Auth {
                 throw AuthException::invalidCredentials();
             }
 
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['email'] = $user['email'];
-            $_SESSION['last_activity'] = time();
+            $_SESSION['user'] = [
+                'id' => $user['id'],
+                'email' => $user['email'],
+                'type' => $user['role'],
+                'last_activity' => time()
+            ];
 
             self::$logger->info('Successful login', ['user_id' => $user['id']]);
             
