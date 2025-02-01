@@ -4,6 +4,8 @@ require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Project.php';
 
+use App\Project; // Add this line
+
 // Check if user is logged in and has admin role
 \App\Auth::checkRole(['admin']);
 
