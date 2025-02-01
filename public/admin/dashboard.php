@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__.'/../../app/Auth.php';
-require_once __DIR__.'/../../app/Database.php';
+require_once __DIR__.'/../../vendor/autoload.php';
+// Database class will be autoloaded
 
 // Check if user is logged in and has admin role
-Auth::checkRole(['admin']);
+\App\Auth::checkRole(['admin']);
 
 // Fetch data for the dashboard
-$pdo = Database::connect();
+$pdo = \App\Database::connect();
 $users = $pdo->query("SELECT * FROM users")->fetchAll();
 $projects = $pdo->query("SELECT * FROM projects")->fetchAll();
 $payments = $pdo->query("
