@@ -7,6 +7,9 @@ use Web3\Contract;
 use Web3\Utils;
 use App\Exceptions\BlockchainException;
 use App\Utils\Logger;
+use App\Contracts\ContractFactory;
+use App\Services\GasEstimator;
+use App\Events\ContractEventHandler;
 
 class BlockchainService {
     private Web3 $web3;
@@ -14,6 +17,9 @@ class BlockchainService {
     private static Logger $logger;
     private string $contractAddress;
     private array $contractABI;
+    private ContractFactory $contractFactory;
+    private GasEstimator $gasEstimator;
+    private ContractEventHandler $eventHandler;
 
     public static function initialize(): void
     {
@@ -27,16 +33,22 @@ class BlockchainService {
      * @param array $contractABI Contract ABI
      * @throws BlockchainException If contract initialization fails
      */
-    public function __construct(string $nodeUrl, string $contractAddress, array $contractABI)
+    public function __construct(string $nodeUrl, ?string $contractAddress = null, ?array $contractABI = null)
     {
-        $this->web3 = new Web3($nodeUrl);
-        $this->contractAddress = $contractAddress;
-        $this->contractABI = $contractABI;
-        
         try {
-            $this->contract = new Contract($this->web3->provider, $this->contractABI);
+            $this->web3 = new Web3($nodeUrl);
+            $this->contractFactory = new ContractFactory();
+            $this->gasEstimator = new GasEstimator($this->web3);
+            $this->eventHandler = new ContractEventHandler();
+            
+            if ($contractAddress && $contractABI) {
+                $this->contractAddress = $contractAddress;
+                $this->contractABI = $contractABI;
+                $this->contract = new Contract($nodeUrl, $contractABI);
+                $this->contract->at($contractAddress);
+            }
         } catch (\Exception $e) {
-            throw BlockchainException::contractNotFound($contractAddress);
+            throw BlockchainException::contractDeploymentFailed($e->getMessage());
         }
     }
 
@@ -47,7 +59,7 @@ class BlockchainService {
      * @return string Deployed contract address
      * @throws BlockchainException If deployment fails
      */
-    public function deployContract(string $contractorAddress, float $budget): string
+    public function deployContract(string $type, string $contractorAddress, float $budget): string
     {
         try {
             // Validate ethereum address
@@ -58,11 +70,24 @@ class BlockchainService {
             // Convert budget to Wei
             $budgetWei = Utils::toWei((string)$budget, 'ether');
             
-            $params = [
+            // Create new contract instance
+            $this->contract = $this->contractFactory->createContract($type, $this->web3->provider->endpoint);
+            
+            // Prepare transaction parameters
+            $transaction = [
                 'from' => $_ENV['ETHEREUM_ADMIN_ADDRESS'],
-                'gas' => '0x200000',
-                'value' => Utils::toHex($budgetWei)
+                'value' => Utils::toHex($budgetWei),
+                'data' => $this->contract->getData('constructor', [$contractorAddress])
             ];
+            
+            // Estimate gas for deployment
+            $gasLimit = $this->gasEstimator->estimateGas($transaction);
+            $gasPrice = $this->gasEstimator->getGasPrice();
+            
+            $params = array_merge($transaction, [
+                'gas' => $gasLimit,
+                'gasPrice' => $gasPrice
+            ]);
 
             $receipt = null;
             $this->contract->deploy($params, [$contractorAddress], function($err, $deployedContract) use (&$receipt) {
@@ -173,37 +198,58 @@ class BlockchainService {
      * @param string $contractAddress Contract address
      * @throws BlockchainException If release fails
      */
+    private ContractRetryManager $retryManager;
+    private ContractValidator $validator;
+    
     public function releaseFunds(string $contractAddress): void
     {
         try {
             if (!Utils::isAddress($contractAddress)) {
                 throw BlockchainException::invalidAddress($contractAddress);
             }
-
-            $contract = new Contract(
-                $this->web3->provider,
-                $this->contractABI,
-                $contractAddress
-            );
-
-            $params = [
-                'from' => $_ENV['ETHEREUM_ADMIN_ADDRESS'],
-                'gas' => '0x200000'
-            ];
-
-            $receipt = null;
-            $contract->send('releaseFunds', [], $params, function($err, $txHash) use (&$receipt) {
-                if ($err) {
-                    throw BlockchainException::transactionFailed($txHash ?? 'unknown', $err->getMessage());
-                }
-                $receipt = $this->checkTransactionStatus($txHash);
-            });
-
-            if (!$receipt || !$receipt['status']) {
-                throw new BlockchainException('Fund release transaction failed');
+            
+            if (!$this->retryManager) {
+                $this->retryManager = new ContractRetryManager($this->gasEstimator);
+                $this->validator = new ContractValidator();
             }
 
-            self::$logger->info('Funds released', [
+            // Initialize and validate contract
+            $this->contract = $this->contractFactory->createContract('escrow', $this->web3->provider->endpoint, $contractAddress);
+            $this->validator->validateContract($this->contract, $contractAddress);
+
+            // Prepare transaction data
+            $transaction = [
+                'from' => $_ENV['ETHEREUM_ADMIN_ADDRESS'],
+                'to' => $contractAddress,
+                'data' => $this->contract->getData('release')
+            ];
+
+            // Estimate gas and get optimal price
+            $gasLimit = $this->gasEstimator->estimateGas($transaction);
+            $gasPrice = $this->gasEstimator->getGasPrice();
+
+            $params = array_merge($transaction, [
+                'gas' => $gasLimit,
+                'gasPrice' => $gasPrice
+            ]);
+
+            // Execute with retry mechanism
+            $receipt = $this->retryManager->executeWithRetry($this->contract, 'release', $params);
+
+            if (!$receipt || !$receipt['status']) {
+                throw BlockchainException::transactionFailed('release', 'Transaction failed');
+            }
+
+            // Subscribe to FundsReleased event
+            $this->eventHandler->subscribe($this->contract, 'FundsReleased', function($event) use ($contractAddress) {
+                self::$logger->info('Funds release event received', [
+                    'contract' => $contractAddress,
+                    'amount' => Utils::fromWei($event['amount'], 'ether'),
+                    'recipient' => $event['recipient']
+                ]);
+            });
+
+            self::$logger->info('Funds release initiated', [
                 'contract' => $contractAddress,
                 'transaction' => $receipt['transactionHash']
             ]);
