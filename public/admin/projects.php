@@ -2,6 +2,7 @@
 require_once __DIR__.'/../../vendor/autoload.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/Auth.php';
+require_once __DIR__ . '/../../app/Project.php';
 
 // Check if user is logged in and has admin role
 \App\Auth::checkRole(['admin']);
